@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 // plagiated from  react-navigation-transitions
 import { Animated, Easing, Platform } from 'react-native';
 

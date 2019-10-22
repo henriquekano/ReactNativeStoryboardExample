@@ -4,10 +4,12 @@ import {createStackNavigator} from 'react-navigation-stack';
 import {createBottomTabNavigator} from 'react-navigation-tabs';
 import * as R from 'ramda';
 import {fromRight} from './transitionAnimations';
+import {createStatefullNavigator} from './statefulStackNavigator';
 
 // interface Flow {
 //   name: string,
 //   screens: JSX.Element[],
+//   params: {},
 // }
 
 // type HomeTypes = 'bottomTab' | 'topTab'
@@ -184,15 +186,22 @@ const createBuilders = (home, edges, flows, screens) => {
         ] = withFlowNavigationDeciderHoC(screen, flows, edges);
       });
 
+      const stackCreator = flow.params
+        ? createStatefullNavigator
+        : createStackNavigator;
       returnValue.push({
         flowName: flow.name,
-        stack: createStackNavigator(resultScreens, {
-          initialRouteName: _generateFlowRoute(flow.name, 0),
-          transitionConfig: () => fromRight(),
-          defaultNavigationOptions: {
-            header: null,
+        stack: stackCreator(
+          resultScreens,
+          {
+            initialRouteName: _generateFlowRoute(flow.name, 0),
+            transitionConfig: () => fromRight(),
+            defaultNavigationOptions: {
+              header: null,
+            },
           },
-        }),
+          flow.params,
+        ),
       });
     });
 

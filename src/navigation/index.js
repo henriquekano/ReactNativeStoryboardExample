@@ -33,6 +33,16 @@ const flows = [
   {
     name: 'flow2',
     screens: ['screenB', 'screenA'],
+    params: [
+      {
+        name: 'email',
+        initialValue: '',
+      },
+      {
+        name: 'password',
+        initialValue: '',
+      },
+    ],
   },
 ];
 
