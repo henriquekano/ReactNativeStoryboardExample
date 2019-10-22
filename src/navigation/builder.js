@@ -27,6 +27,7 @@ import {fromRight} from './transitionAnimations';
 //   identifier: string,
 // }
 
+/* helper stuff { */
 const _generateFlowRoute = (flowName, step) => `Flow{${flowName}}Step{${step}}`;
 
 const _extractFlowNameAndStepFromFlowRoute = flowRoute => {
@@ -51,7 +52,26 @@ const _extractHomeNameAndStepFromHomeRoute = homeRouteName => {
 const _getScreenWithName = (screenName, screens) =>
   screens.filter(R.propEq('name', screenName))[0];
 
+const _getFlowWithName = (flowName, flows) =>
+  flows.filter(R.propEq('name', flowName))[0];
+
 const _getCurrentRouteName = navigation => navigation.state.routeName;
+
+const _getEdgesWithFrom = (from, edges) =>
+  R.filter(R.propEq('from', from))(edges);
+
+const _buildNavigationParams = (screenName, navigation, edges) => {
+  const currentRouteEdges = _getEdgesWithFrom(screenName, edges);
+  const navigationProps = {};
+  currentRouteEdges.forEach(edge => {
+    navigationProps[edge.identifier] = () => {
+      navigation.push(edge.to);
+    };
+  });
+
+  return navigationProps;
+};
+/* } */
 
 const useAndroidBackEffect = handler => {
   useEffect(() => {
@@ -60,15 +80,13 @@ const useAndroidBackEffect = handler => {
   });
 };
 
-const withFlowNavigationDeciderHoC = (WrappedComponent, flows) => ({
+const withFlowNavigationDeciderHoC = (WrappedComponent, flows, edges) => ({
   navigation,
   ...otherProps
 }) => {
   const currentRoute = _getCurrentRouteName(navigation);
   const flowParameters = _extractFlowNameAndStepFromFlowRoute(currentRoute);
-  const flowDefinition = R.filter(R.propEq('name', flowParameters.flow))(
-    flows,
-  )[0];
+  const flowDefinition = _getFlowWithName(flowParameters.flow, flows);
   const flowLength = flowDefinition.screens.length;
   const flowNavigationType = flowDefinition.navigationType;
   let onBack = () => navigation.goBack();
@@ -91,8 +109,22 @@ const withFlowNavigationDeciderHoC = (WrappedComponent, flows) => ({
     onBack = () => navigation.dismiss();
   }
 
+  const currentScreenName = flowDefinition.screens[flowParameters.step];
+  const navigationProps = _buildNavigationParams(
+    currentScreenName,
+    navigation,
+    edges,
+  );
+
   useAndroidBackEffect(onBack);
-  return <WrappedComponent onNext={onNext} onBack={onBack} {...otherProps} />;
+  return (
+    <WrappedComponent
+      onNext={onNext}
+      onBack={onBack}
+      {...navigationProps}
+      {...otherProps}
+    />
+  );
 };
 
 const withRootNavigationDeciderHoC = (WrappedComponent, edges, flows) => ({
@@ -100,13 +132,11 @@ const withRootNavigationDeciderHoC = (WrappedComponent, edges, flows) => ({
   ...otherProps
 }) => {
   const currentRouteName = _getCurrentRouteName(navigation);
-  const currentRouteEdges = R.filter(R.propEq('from', currentRouteName))(edges);
-  const navigationProps = {};
-  currentRouteEdges.forEach(edge => {
-    navigationProps[edge.identifier] = () => {
-      navigation.push(edge.to);
-    };
-  });
+  const navigationProps = _buildNavigationParams(
+    currentRouteName,
+    navigation,
+    edges,
+  );
 
   useAndroidBackEffect(() => navigation.pop());
   return (
@@ -126,15 +156,11 @@ const withHomeNavigationDeciderHoC = (WrappedComponent, edges, flows) => ({
   const extractedHomeRoute = _extractHomeNameAndStepFromHomeRoute(
     currentRouteName,
   );
-  const currentRouteEdges = R.filter(
-    R.propEq('from', extractedHomeRoute.screenName),
-  )(edges);
-  const navigationProps = {};
-  currentRouteEdges.forEach(edge => {
-    navigationProps[edge.identifier] = () => {
-      navigation.push(edge.to);
-    };
-  });
+  const navigationProps = _buildNavigationParams(
+    extractedHomeRoute.screenName,
+    navigation,
+    edges,
+  );
 
   useAndroidBackEffect(() => navigation.pop());
   return (
@@ -155,7 +181,7 @@ const createBuilders = (home, edges, flows, screens) => {
         const {screen} = _getScreenWithName(screenName, screens);
         resultScreens[
           _generateFlowRoute(flow.name, index)
-        ] = withFlowNavigationDeciderHoC(screen, flows);
+        ] = withFlowNavigationDeciderHoC(screen, flows, edges);
       });
 
       returnValue.push({
@@ -176,7 +202,7 @@ const createBuilders = (home, edges, flows, screens) => {
   const buildHomeNavigator = () => {
     const resultScreens = {};
     home.screens.forEach((screenName, index) => {
-      const {screen} = screens.filter(R.propEq('name', screenName))[0];
+      const {screen} = _getScreenWithName(screenName, screens);
       resultScreens[
         _generateHomeRoute(screenName, index)
       ] = withHomeNavigationDeciderHoC(screen, edges);
