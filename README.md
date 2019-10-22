@@ -3,6 +3,8 @@
 import {AppRegistry} from 'react-native';
 import {buildNavigationScheme} from './builder';
 
+// Names should be unique
+
 const screens = [
     {
         name: 'route1',
@@ -17,10 +19,21 @@ const screens = [
 const flow = [
     {
         name: 'flow1',
-        screens: [Screen1, Screen2],
+        screens: ['route1', 'route2'],
+        // optional
+        // adding a param makes available for the screens:
+        // props.screenProps: { setParam, param, rawSetState }
+        params: [
+            {
+                name: 'email',
+                initialValue: '',
+            }
+        ],
     }
 ]
 
+// These will be available to the screen, regardles
+// of the situation (being in a flow, in the home, etc)
 const edges = [
     {
         from: 'route1',
@@ -32,16 +45,11 @@ const edges = [
         to: 'flow1',
         identifier: 'goToRoute2',
     },
-    {
-        from: 'flow1',
-        to: 'route1',
-        identifier: 'goToRoute2',
-    },
 ]
 
 const home = {
     type: 'bottomTabs',
-    screens: [Screen1, Screen2],
+    screens: ['route1', 'route2'],
 }
 
 const app = createAppContainer(buildNavigationScheme(home, screens, flows, edges);
